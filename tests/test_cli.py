@@ -84,9 +84,10 @@ class TestCLI(unittest.TestCase):
             hasil = _jalankan(["kartu", "tambah", "--deck", "TidakAda",
                                "--depan", "Q", "--belakang", "A"], tmp)
             self.assertNotEqual(hasil.returncode, 0)
-            # Nomor kartu bukan angka.
+            # Nomor kartu bukan angka: ditolak ramah, bukan error argparse.
             hasil = _jalankan(["kartu", "hapus", "--deck", "JST", "--nomor", "abc"], tmp)
-            self.assertNotEqual(hasil.returncode, 0)
+            self.assertEqual(hasil.returncode, 1)
+            self.assertIn("Error: --nomor harus berupa angka", hasil.stderr)
             # Kartu yang dihapus tidak ada.
             hasil = _jalankan(["kartu", "hapus", "--deck", "JST", "--nomor", "99"], tmp)
             self.assertNotEqual(hasil.returncode, 0)

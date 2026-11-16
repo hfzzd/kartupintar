@@ -49,7 +49,7 @@ def _parser():
     d.add_argument("--deck", required=True, help="Nama deck.")
     h = sub_kartu.add_parser("hapus", help="Hapus kartu dari deck.")
     h.add_argument("--deck", required=True, help="Nama deck.")
-    h.add_argument("--nomor", required=True, type=int, help="Nomor kartu yang dihapus.")
+    h.add_argument("--nomor", required=True, help="Nomor kartu yang dihapus.")
 
     r = sub.add_parser("review", help="Sesi review interaktif kartu yang jatuh tempo.")
     r.add_argument("--deck", required=True, help="Nama deck yang direview.")
@@ -187,7 +187,11 @@ def main(argv=None):
         elif args.perintah == "kartu" and args.aksi_kartu == "daftar":
             _tampil_kartu(data, args.deck)
         elif args.perintah == "kartu" and args.aksi_kartu == "hapus":
-            kartu = model.hapus_kartu(data, args.deck, args.nomor)
+            try:
+                nomor = int(args.nomor)
+            except ValueError:
+                raise ValueError("--nomor harus berupa angka, contoh: --nomor 1.")
+            kartu = model.hapus_kartu(data, args.deck, nomor)
             model.simpan_data(args.data, data)
             print(f"Kartu [{kartu['id']}] \"{kartu['depan']}\" dihapus dari deck \"{args.deck}\".")
         elif args.perintah == "review":
