@@ -6,6 +6,7 @@ Contoh:
     python3 -m kartupintar.cli kartu tambah --deck JST --depan "Apa itu perceptron?" --belakang "..."
     python3 -m kartupintar.cli kartu daftar --deck JST
     python3 -m kartupintar.cli kartu hapus --deck JST --nomor 1
+    python3 -m kartupintar.cli review --deck JST
 """
 
 import argparse
@@ -13,6 +14,7 @@ import sys
 
 from . import __version__
 from . import model
+from . import sm2
 
 
 def _parser():
@@ -43,6 +45,9 @@ def _parser():
     h = sub_kartu.add_parser("hapus", help="Hapus kartu dari deck.")
     h.add_argument("--deck", required=True, help="Nama deck.")
     h.add_argument("--nomor", required=True, type=int, help="Nomor kartu yang dihapus.")
+
+    r = sub.add_parser("review", help="Sesi review interaktif kartu yang jatuh tempo.")
+    r.add_argument("--deck", required=True, help="Nama deck yang direview.")
     return p
 
 
@@ -67,6 +72,48 @@ def _tampil_kartu(data, nama_deck):
         print(f"      jatuh tempo {k['jatuh_tempo']} (interval {k['interval']} hari, ease {k['ease']})")
 
 
+def _minta_nilai():
+    """Minta nilai kualitas 0-5 dari pengguna; kembalikan None bila sesi dibatalkan."""
+    while True:
+        jawaban = input("Nilai (0-5, q untuk berhenti): ").strip().lower()
+        if jawaban == "q":
+            return None
+        try:
+            nilai = int(jawaban)
+        except ValueError:
+            print("Masukkan angka 0-5.")
+            continue
+        if 0 <= nilai <= 5:
+            return nilai
+        print("Nilai harus 0-5.")
+
+
+def _sesi_review(data, nama_deck, path_data):
+    """Jalankan sesi review interaktif: kartu jatuh tempo satu per satu."""
+    deck = model.cari_deck(data, nama_deck)
+    if deck is None:
+        raise ValueError(f'Deck "{nama_deck}" tidak ditemukan.')
+    jatuh = sm2.kartu_jatuh_tempo(deck)
+    if not jatuh:
+        print(f'Tidak ada kartu jatuh tempo di deck "{nama_deck}".')
+        return
+    print(f'Review deck "{nama_deck}": {len(jatuh)} kartu jatuh tempo.')
+    direview = 0
+    for kartu in jatuh:
+        print(f"\n[{kartu['id']}] {kartu['depan']}")
+        input("Tekan Enter untuk melihat jawaban...")
+        print(f"  Jawaban: {kartu['belakang']}")
+        nilai = _minta_nilai()
+        if nilai is None:
+            print("Sesi review dihentikan.")
+            break
+        sm2.review_kartu(kartu, nilai)
+        model.simpan_data(path_data, data)
+        direview += 1
+        print(f"  -> interval {kartu['interval']} hari, jatuh tempo {kartu['jatuh_tempo']}, ease {kartu['ease']}")
+    print(f"\nSesi review selesai: {direview} kartu direview.")
+
+
 def main(argv=None):
     args = _parser().parse_args(argv)
     try:
@@ -87,6 +134,8 @@ def main(argv=None):
             kartu = model.hapus_kartu(data, args.deck, args.nomor)
             model.simpan_data(args.data, data)
             print(f"Kartu [{kartu['id']}] \"{kartu['depan']}\" dihapus dari deck \"{args.deck}\".")
+        elif args.perintah == "review":
+            _sesi_review(data, args.deck, args.data)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
