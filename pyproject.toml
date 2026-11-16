@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kartupintar"
+version = "0.1.0"
+description = "Aplikasi flashcard CLI berbahasa Indonesia dengan spaced repetition (SM-2)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Hafizd Ammar", email = "hafizdammar@gmail.com" }]
+
+[project.scripts]
+kartupintar = "kartupintar.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kartupintar*"]
