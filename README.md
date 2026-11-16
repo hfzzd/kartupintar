@@ -65,7 +65,7 @@ python3 -m unittest discover -s tests
 
 - [x] Deck & kartu (buat, daftar, tambah, hapus)
 - [x] Review SM-2 + sesi interaktif
-- [ ] Kartu jatuh tempo & statistik deck
+- [x] Kartu jatuh tempo & statistik deck
 - [ ] Ekspor / impor CSV
 - [ ] Test + data contoh
 - [ ] Statistik retensi & mode latihan tanpa nilai

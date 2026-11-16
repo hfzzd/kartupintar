@@ -140,3 +140,23 @@ def daftar_kartu(data, nama_deck):
     if deck is None:
         raise ValueError(f'Deck "{nama_deck}" tidak ditemukan.')
     return sorted(deck["kartu"], key=lambda k: k["id"])
+
+
+def statistik_deck(deck, tanggal=None):
+    """Ringkasan deck: total, jatuh tempo, sudah direview, rata-rata ease, distribusi interval."""
+    tanggal = tanggal or hari_ini()
+    kartu_list = deck["kartu"]
+    total = len(kartu_list)
+    jatuh = sum(1 for k in kartu_list if k["jatuh_tempo"] <= tanggal)
+    direview = sum(1 for k in kartu_list if k["repetisi"] > 0)
+    rata_ease = round(sum(k["ease"] for k in kartu_list) / total, 2) if total else 0.0
+    distribusi = {}
+    for k in kartu_list:
+        distribusi[k["interval"]] = distribusi.get(k["interval"], 0) + 1
+    return {
+        "total": total,
+        "jatuh_tempo": jatuh,
+        "sudah_direview": direview,
+        "rata_rata_ease": rata_ease,
+        "distribusi_interval": dict(sorted(distribusi.items())),
+    }

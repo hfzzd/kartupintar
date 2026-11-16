@@ -7,6 +7,8 @@ Contoh:
     python3 -m kartupintar.cli kartu daftar --deck JST
     python3 -m kartupintar.cli kartu hapus --deck JST --nomor 1
     python3 -m kartupintar.cli review --deck JST
+    python3 -m kartupintar.cli jatuh-tempo
+    python3 -m kartupintar.cli statistik --deck JST
 """
 
 import argparse
@@ -48,6 +50,10 @@ def _parser():
 
     r = sub.add_parser("review", help="Sesi review interaktif kartu yang jatuh tempo.")
     r.add_argument("--deck", required=True, help="Nama deck yang direview.")
+
+    sub.add_parser("jatuh-tempo", help="Tampilkan semua kartu yang jatuh tempo (semua deck).")
+    s = sub.add_parser("statistik", help="Tampilkan statistik sebuah deck.")
+    s.add_argument("--deck", required=True, help="Nama deck.")
     return p
 
 
@@ -114,6 +120,38 @@ def _sesi_review(data, nama_deck, path_data):
     print(f"\nSesi review selesai: {direview} kartu direview.")
 
 
+def _tampil_jatuh_tempo(data):
+    """Tampilkan semua kartu jatuh tempo (semua deck), urut tanggal jatuh tempo."""
+    semua = []
+    for deck in data["deck"]:
+        for kartu in sm2.kartu_jatuh_tempo(deck):
+            semua.append((deck["nama"], kartu))
+    semua.sort(key=lambda item: (item[1]["jatuh_tempo"], item[0], item[1]["id"]))
+    if not semua:
+        print("Tidak ada kartu jatuh tempo. Semua kartu sudah direview!")
+        return
+    print(f"{len(semua)} kartu jatuh tempo:")
+    for nama_deck, k in semua:
+        print(f"[{k['id']}] {nama_deck} — {k['depan']} (jatuh tempo {k['jatuh_tempo']})")
+
+
+def _tampil_statistik(data, nama_deck):
+    deck = model.cari_deck(data, nama_deck)
+    if deck is None:
+        raise ValueError(f'Deck "{nama_deck}" tidak ditemukan.')
+    stat = model.statistik_deck(deck)
+    print(f'Statistik deck "{nama_deck}":')
+    print(f"  Total kartu        : {stat['total']}")
+    print(f"  Jatuh tempo        : {stat['jatuh_tempo']}")
+    print(f"  Sudah direview     : {stat['sudah_direview']}")
+    print(f"  Rata-rata ease     : {stat['rata_rata_ease']}")
+    print("  Distribusi interval:")
+    if not stat["distribusi_interval"]:
+        print("    (belum ada kartu)")
+    for interval, jumlah in stat["distribusi_interval"].items():
+        print(f"    {interval} hari: {jumlah} kartu")
+
+
 def main(argv=None):
     args = _parser().parse_args(argv)
     try:
@@ -136,6 +174,10 @@ def main(argv=None):
             print(f"Kartu [{kartu['id']}] \"{kartu['depan']}\" dihapus dari deck \"{args.deck}\".")
         elif args.perintah == "review":
             _sesi_review(data, args.deck, args.data)
+        elif args.perintah == "jatuh-tempo":
+            _tampil_jatuh_tempo(data)
+        elif args.perintah == "statistik":
+            _tampil_statistik(data, args.deck)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
