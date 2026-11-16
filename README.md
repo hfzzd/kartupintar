@@ -61,13 +61,28 @@ berikutnya → interval sebelumnya × ease. Ease tidak pernah di bawah 1,3.
 python3 -m unittest discover -s tests
 ```
 
+31 test: model deck & kartu (16), algoritma SM-2 (14), dan CLI end-to-end (3).
+
+## Data contoh
+
+Berkas `contoh/kartupintar-contoh.json` berisi 1 deck JST dengan 5 kartu
+tentang jaringan syaraf tiruan — 1 kartu sudah direview 1× (jatuh tempo
+besok), 4 kartu baru jatuh tempo hari ini. Cara mencobanya:
+
+```bash
+cp contoh/kartupintar-contoh.json kartupintar.json
+python3 -m kartupintar.cli jatuh-tempo
+python3 -m kartupintar.cli statistik --deck JST
+python3 -m kartupintar.cli review --deck JST
+```
+
 ## Rencana
 
 - [x] Deck & kartu (buat, daftar, tambah, hapus)
 - [x] Review SM-2 + sesi interaktif
 - [x] Kartu jatuh tempo & statistik deck
 - [x] Ekspor / impor CSV
-- [ ] Test + data contoh
+- [x] Test + data contoh
 - [ ] Statistik retensi & mode latihan tanpa nilai
 
 ## Lisensi
