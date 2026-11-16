@@ -9,12 +9,15 @@ Contoh:
     python3 -m kartupintar.cli review --deck JST
     python3 -m kartupintar.cli jatuh-tempo
     python3 -m kartupintar.cli statistik --deck JST
+    python3 -m kartupintar.cli ekspor --deck JST --keluar jst.csv
+    python3 -m kartupintar.cli impor --deck JST --berkas jst.csv
 """
 
 import argparse
 import sys
 
 from . import __version__
+from . import export
 from . import model
 from . import sm2
 
@@ -54,6 +57,13 @@ def _parser():
     sub.add_parser("jatuh-tempo", help="Tampilkan semua kartu yang jatuh tempo (semua deck).")
     s = sub.add_parser("statistik", help="Tampilkan statistik sebuah deck.")
     s.add_argument("--deck", required=True, help="Nama deck.")
+
+    e = sub.add_parser("ekspor", help="Ekspor deck ke berkas CSV.")
+    e.add_argument("--deck", required=True, help="Nama deck.")
+    e.add_argument("--keluar", default=None, help="Berkas CSV tujuan (bawaan: <nama-deck>.csv).")
+    i = sub.add_parser("impor", help="Impor kartu dari berkas CSV ke deck.")
+    i.add_argument("--deck", required=True, help="Nama deck tujuan (dibuat bila belum ada).")
+    i.add_argument("--berkas", required=True, help="Berkas CSV sumber.")
     return p
 
 
@@ -81,7 +91,11 @@ def _tampil_kartu(data, nama_deck):
 def _minta_nilai():
     """Minta nilai kualitas 0-5 dari pengguna; kembalikan None bila sesi dibatalkan."""
     while True:
-        jawaban = input("Nilai (0-5, q untuk berhenti): ").strip().lower()
+        try:
+            jawaban = input("Nilai (0-5, q untuk berhenti): ").strip().lower()
+        except EOFError:
+            print()
+            return None
         if jawaban == "q":
             return None
         try:
@@ -107,7 +121,11 @@ def _sesi_review(data, nama_deck, path_data):
     direview = 0
     for kartu in jatuh:
         print(f"\n[{kartu['id']}] {kartu['depan']}")
-        input("Tekan Enter untuk melihat jawaban...")
+        try:
+            input("Tekan Enter untuk melihat jawaban...")
+        except EOFError:
+            print("\nSesi review dihentikan.")
+            break
         print(f"  Jawaban: {kartu['belakang']}")
         nilai = _minta_nilai()
         if nilai is None:
@@ -178,6 +196,20 @@ def main(argv=None):
             _tampil_jatuh_tempo(data)
         elif args.perintah == "statistik":
             _tampil_statistik(data, args.deck)
+        elif args.perintah == "ekspor":
+            deck = model.cari_deck(data, args.deck)
+            if deck is None:
+                raise ValueError(f'Deck "{args.deck}" tidak ditemukan.')
+            keluar = args.keluar or f"{args.deck}.csv"
+            jumlah = export.ekspor_csv(deck, keluar)
+            print(f"{jumlah} kartu dari deck \"{args.deck}\" diekspor ke {keluar}.")
+        elif args.perintah == "impor":
+            deck, jumlah, peringatan = export.impor_csv(data, args.deck, args.berkas)
+            model.simpan_data(args.data, data)
+            for p in peringatan:
+                print(f"Peringatan: {p}")
+            print(f"{jumlah} kartu diimpor ke deck \"{deck['nama']}\""
+                  + (f" ({len(peringatan)} baris dilewati)." if peringatan else "."))
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
