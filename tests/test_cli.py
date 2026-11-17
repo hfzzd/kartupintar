@@ -1,5 +1,6 @@
 """Unit test CLI KartuPintar (end-to-end lewat subprocess di direktori sementara)."""
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -72,6 +73,78 @@ class TestCLI(unittest.TestCase):
             hasil = _jalankan(["kartu", "daftar", "--deck", "Salinan"], tmp)
             self.assertIn("Apa itu perceptron?", hasil.stdout)
             self.assertIn("Apa itu epoch?", hasil.stdout)
+
+    def test_retensi_end_to_end(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _jalankan(["deck", "buat", "--nama", "JST"], tmp)
+            for depan, belakang in [
+                ("Apa itu perceptron?", "Model neuron tiruan paling sederhana."),
+                ("Apa itu epoch?", "Satu putaran penuh pelatihan atas seluruh data."),
+            ]:
+                hasil = _jalankan(["kartu", "tambah", "--deck", "JST",
+                                   "--depan", depan, "--belakang", belakang], tmp)
+                self.assertEqual(hasil.returncode, 0, hasil.stderr)
+
+            # Review 2 kartu: nilai 5 (benar) dan 2 (salah).
+            hasil = _jalankan(["review", "--deck", "JST"], tmp, masukan="\n5\n\n2\n")
+            self.assertEqual(hasil.returncode, 0, hasil.stderr)
+
+            hasil = _jalankan(["retensi", "--deck", "JST"], tmp)
+            self.assertEqual(hasil.returncode, 0, hasil.stderr)
+            self.assertIn("Total review       : 2", hasil.stdout)
+            self.assertIn("Benar (nilai >= 3) : 1", hasil.stdout)
+            self.assertIn("Tingkat retensi    : 50.0%", hasil.stdout)
+            self.assertIn("Streak             : 1 hari", hasil.stdout)
+
+            # --hari bukan angka: ditolak ramah, exit 1.
+            hasil = _jalankan(["retensi", "--deck", "JST", "--hari", "abc"], tmp)
+            self.assertEqual(hasil.returncode, 1)
+            self.assertIn("Error: --hari harus berupa angka", hasil.stderr)
+            # --hari 0: ditolak ramah, exit 1.
+            hasil = _jalankan(["retensi", "--deck", "JST", "--hari", "0"], tmp)
+            self.assertEqual(hasil.returncode, 1)
+            self.assertIn("Error: Jumlah hari harus minimal 1.", hasil.stderr)
+            # Deck hilang: exit 1.
+            hasil = _jalankan(["retensi", "--deck", "TidakAda"], tmp)
+            self.assertEqual(hasil.returncode, 1)
+            self.assertIn("Error:", hasil.stderr)
+
+    def test_latihan_end_to_end_tidak_mengubah_berkas(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _jalankan(["deck", "buat", "--nama", "JST"], tmp)
+            for depan, belakang in [
+                ("Apa itu perceptron?", "Model neuron tiruan paling sederhana."),
+                ("Apa itu epoch?", "Satu putaran penuh pelatihan atas seluruh data."),
+            ]:
+                hasil = _jalankan(["kartu", "tambah", "--deck", "JST",
+                                   "--depan", depan, "--belakang", belakang], tmp)
+                self.assertEqual(hasil.returncode, 0, hasil.stderr)
+            berkas_data = os.path.join(tmp, "kartupintar.json")
+
+            def _md5():
+                with open(berkas_data, "rb") as f:
+                    return hashlib.md5(f.read()).hexdigest()
+
+            # Berhenti dengan q: exit 0, berkas data tidak berubah.
+            sebelum = _md5()
+            hasil = _jalankan(["latihan", "--deck", "JST"], tmp, masukan="q\n")
+            self.assertEqual(hasil.returncode, 0, hasil.stderr)
+            self.assertIn("Latihan dihentikan.", hasil.stdout)
+            self.assertEqual(_md5(), sebelum)
+
+            # Berhenti dengan EOF (stdin langsung habis): exit 0, berkas tetap sama.
+            hasil = _jalankan(["latihan", "--deck", "JST"], tmp, masukan="")
+            self.assertEqual(hasil.returncode, 0, hasil.stderr)
+            self.assertIn("Latihan dihentikan.", hasil.stdout)
+            self.assertEqual(_md5(), sebelum)
+
+            # Lihat semua kartu (Enter dua kali): selesai rapi, berkas tetap sama.
+            hasil = _jalankan(["latihan", "--deck", "JST"], tmp, masukan="\n\n")
+            self.assertEqual(hasil.returncode, 0, hasil.stderr)
+            self.assertIn("Latihan selesai: 2 kartu dilihat.", hasil.stdout)
+            self.assertIn("Apa itu perceptron?", hasil.stdout)
+            self.assertIn("Apa itu epoch?", hasil.stdout)
+            self.assertEqual(_md5(), sebelum)
 
     def test_input_salah_exit_bukan_nol(self):
         with tempfile.TemporaryDirectory() as tmp:
