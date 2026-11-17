@@ -24,7 +24,7 @@ class TestCLI(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             hasil = _jalankan(["--version"], tmp)
             self.assertEqual(hasil.returncode, 0)
-            self.assertIn("0.1.0", hasil.stdout)
+            self.assertIn("0.2.0", hasil.stdout)
 
     def test_alur_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmp:

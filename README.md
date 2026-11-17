@@ -28,6 +28,14 @@ python3 -m kartupintar.cli kartu hapus --deck JST --nomor 1
 # Sesi review (kartu yang jatuh tempo hari ini)
 python3 -m kartupintar.cli review --deck JST
 
+# Mode latihan: balik semua kartu tanpa nilai, jadwal SM-2 tidak berubah
+python3 -m kartupintar.cli latihan --deck JST
+
+# Statistik retensi (bawaan: 30 hari terakhir, semua deck)
+python3 -m kartupintar.cli retensi --deck JST
+python3 -m kartupintar.cli retensi --deck JST --hari 7
+python3 -m kartupintar.cli retensi
+
 # Kartu yang jatuh tempo + statistik deck
 python3 -m kartupintar.cli jatuh-tempo
 python3 -m kartupintar.cli statistik --deck JST
@@ -39,7 +47,7 @@ python3 -m kartupintar.cli impor --deck JST --berkas jst.csv
 
 Semua perintah memakai file data `kartupintar.json` di direktori kerja.
 Pakai `--data berkas-lain.json` untuk memakai file data lain.
-Lihat versi aplikasi dengan `python3 -m kartupintar.cli --version` (saat ini 0.1.0).
+Lihat versi aplikasi dengan `python3 -m kartupintar.cli --version` (saat ini 0.2.0).
 
 Pesan error selalu diawali `Error:` dan keluar dengan kode 1, misalnya
 `Error: Deck "JST" tidak ditemukan.` atau
@@ -56,6 +64,10 @@ cp contoh/kartupintar-contoh.json kartupintar.json
 python3 -m kartupintar.cli jatuh-tempo
 python3 -m kartupintar.cli statistik --deck JST
 python3 -m kartupintar.cli review --deck JST
+
+# Setelah satu sesi review, lihat retensimu dan coba mode latihan
+python3 -m kartupintar.cli retensi --deck JST
+python3 -m kartupintar.cli latihan --deck JST
 ```
 
 ## Cara kerja SM-2 (review)
@@ -107,6 +119,41 @@ Angkanya cocok hitungan tangan: rata-rata ease = (2,6 + 2,5 + 2,5 + 2,5 + 2,5) /
 = 2,52; 4 kartu baru berinterval 0 hari dan 1 kartu yang sudah direview 1×
 berinterval 1 hari.
 
+## Statistik retensi & mode latihan
+
+Setiap review dicatat di riwayat (`riwayat` di berkas data: tanggal, deck,
+kartu, dan nilai). `retensi` merangkumnya dalam jendela hari yang diminta
+(bawaan 30 hari; tanpa `--deck` berarti semua deck):
+
+- **Benar** = review dengan nilai >= 3 (kartu diingat, SM-2 menaikkan repetisi).
+- **Tingkat retensi** = benar / total review × 100%.
+- **Streak** = jumlah hari berturut-turut ada review, dihitung mundur dari hari
+  ini (bila hari ini belum ada review, dihitung sampai kemarin).
+- **Per hari** = rincian benar/total tiap tanggal dalam jendela.
+
+Contoh: deck contoh di atas direview 5 kartu dengan nilai 5, 4, 3, 2, 5 —
+4 benar dari 5 review, semuanya hari ini:
+
+```
+Statistik retensi deck "JST" (30 hari terakhir):
+  Total review       : 5
+  Benar (nilai >= 3) : 4
+  Tingkat retensi    : 80.0%
+  Streak             : 1 hari
+  Per hari:
+    2026-11-17: 4/5 benar
+```
+
+Angkanya cocok hitungan tangan: 4/5 = 80,0%; streak 1 hari karena review
+baru ada hari ini. Bila deck belum pernah direview, semuanya 0 dan
+streak 0 hari.
+
+`latihan` membalik semua kartu dalam deck satu per satu — tanpa nilai, tanpa
+mengubah ease, interval, repetisi, maupun jatuh tempo. Cocok untuk membaca
+ulang sebelum ujian tanpa mengacaukan jadwal SM-2. Tekan Enter untuk melihat
+jawaban tiap kartu, `q` untuk berhenti. Berkas data tidak berubah sama sekali
+selama latihan.
+
 ## Impor / ekspor CSV
 
 `ekspor` menulis deck ke CSV dengan kolom
@@ -135,9 +182,10 @@ menghasilkan kartu yang sama persis, termasuk nilai SM-2-nya.
 python3 -m unittest discover -s tests
 ```
 
-31 test, semua lolos: model deck & kartu (16), algoritma SM-2 (14),
-dan CLI end-to-end (3) — termasuk alur lengkap buat deck → tambah kartu →
-review → jatuh-tempo → statistik → ekspor/impor, serta input salah yang
+45 test, semua lolos: model deck & kartu (14), algoritma SM-2 (14),
+statistik retensi + latihan (12), dan CLI end-to-end (5) — termasuk alur
+lengkap buat deck → tambah kartu → review → jatuh-tempo → statistik →
+retensi → latihan → ekspor/impor, serta input salah yang
 ditolak dengan kode keluar bukan 0.
 
 ## Rencana
@@ -148,7 +196,7 @@ ditolak dengan kode keluar bukan 0.
 - [x] Ekspor / impor CSV
 - [x] Test + data contoh
 - [x] README lengkap + polish CLI
-- [ ] Statistik retensi & mode latihan tanpa nilai
+- [x] Statistik retensi & mode latihan tanpa nilai
 
 ## Lisensi
 
