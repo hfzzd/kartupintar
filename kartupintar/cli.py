@@ -7,6 +7,7 @@ Contoh:
     python3 -m kartupintar.cli kartu daftar --deck JST
     python3 -m kartupintar.cli kartu hapus --deck JST --nomor 1
     python3 -m kartupintar.cli review --deck JST
+    python3 -m kartupintar.cli latihan --deck JST
     python3 -m kartupintar.cli jatuh-tempo
     python3 -m kartupintar.cli statistik --deck JST
     python3 -m kartupintar.cli retensi --deck JST --hari 30
@@ -55,6 +56,9 @@ def _parser():
 
     r = sub.add_parser("review", help="Sesi review interaktif kartu yang jatuh tempo.")
     r.add_argument("--deck", required=True, help="Nama deck yang direview.")
+
+    l = sub.add_parser("latihan", help="Mode latihan: lihat semua kartu tanpa nilai, tanpa mengubah SM-2.")
+    l.add_argument("--deck", required=True, help="Nama deck yang dilatih.")
 
     sub.add_parser("jatuh-tempo", help="Tampilkan semua kartu yang jatuh tempo (semua deck).")
     s = sub.add_parser("statistik", help="Tampilkan statistik sebuah deck.")
@@ -144,6 +148,32 @@ def _sesi_review(data, nama_deck, path_data):
     print(f"\nSesi review selesai: {direview} kartu direview.")
 
 
+def _sesi_latihan(data, nama_deck):
+    """Mode latihan: balik semua kartu dalam deck tanpa nilai dan tanpa mengubah SM-2."""
+    deck = model.cari_deck(data, nama_deck)
+    if deck is None:
+        raise ValueError(f'Deck "{nama_deck}" tidak ditemukan.')
+    kartu_list = model.daftar_kartu(data, nama_deck)
+    if not kartu_list:
+        print(f'Deck "{nama_deck}" belum punya kartu.')
+        return
+    print(f'Latihan deck "{nama_deck}": {len(kartu_list)} kartu (tanpa nilai, jadwal SM-2 tidak berubah).')
+    dilihat = 0
+    for kartu in kartu_list:
+        print(f"\n[{kartu['id']}] {kartu['depan']}")
+        try:
+            jawaban = input("Tekan Enter untuk melihat jawaban (q untuk berhenti)...").strip().lower()
+        except EOFError:
+            print("\nLatihan dihentikan.")
+            break
+        if jawaban == "q":
+            print("Latihan dihentikan.")
+            break
+        print(f"  Jawaban: {kartu['belakang']}")
+        dilihat += 1
+    print(f"\nLatihan selesai: {dilihat} kartu dilihat. Tidak ada nilai SM-2 yang berubah.")
+
+
 def _tampil_jatuh_tempo(data):
     """Tampilkan semua kartu jatuh tempo (semua deck), urut tanggal jatuh tempo."""
     semua = []
@@ -219,6 +249,8 @@ def main(argv=None):
             print(f"Kartu [{kartu['id']}] \"{kartu['depan']}\" dihapus dari deck \"{args.deck}\".")
         elif args.perintah == "review":
             _sesi_review(data, args.deck, args.data)
+        elif args.perintah == "latihan":
+            _sesi_latihan(data, args.deck)
         elif args.perintah == "jatuh-tempo":
             _tampil_jatuh_tempo(data)
         elif args.perintah == "statistik":
