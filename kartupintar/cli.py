@@ -19,6 +19,7 @@ import sys
 from . import __version__
 from . import export
 from . import model
+from . import retensi
 from . import sm2
 
 
@@ -132,6 +133,7 @@ def _sesi_review(data, nama_deck, path_data):
             print("Sesi review dihentikan.")
             break
         sm2.review_kartu(kartu, nilai)
+        retensi.catat_review(data, nama_deck, kartu["id"], nilai)
         model.simpan_data(path_data, data)
         direview += 1
         print(f"  -> interval {kartu['interval']} hari, jatuh tempo {kartu['jatuh_tempo']}, ease {kartu['ease']}")

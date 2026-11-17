@@ -20,10 +20,14 @@ Struktur data:
             }
           ],
         }
-      ]
+      ],
+      "riwayat": [
+        {"tanggal": "2026-11-16", "deck": "JST", "kartu_id": 1, "nilai": 5}
+      ],
     }
 
 Kartu baru langsung jatuh tempo di hari dibuat, supaya bisa direview hari itu juga.
+Setiap review lewat perintah `review` dicatat di "riwayat" untuk statistik retensi.
 """
 
 import json
@@ -39,7 +43,7 @@ def hari_ini():
 
 
 def data_kosong():
-    return {"deck": []}
+    return {"deck": [], "riwayat": []}
 
 
 def muat_data(path):
@@ -50,6 +54,8 @@ def muat_data(path):
         data = json.load(f)
     if not isinstance(data, dict) or "deck" not in data:
         raise ValueError(f"Berkas {path} bukan data KartuPintar yang valid.")
+    # Berkas lama (sebelum riwayat review) tetap bisa dibaca.
+    data.setdefault("riwayat", [])
     return data
 
 
