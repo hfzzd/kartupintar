@@ -9,6 +9,7 @@ Contoh:
     python3 -m kartupintar.cli review --deck JST
     python3 -m kartupintar.cli jatuh-tempo
     python3 -m kartupintar.cli statistik --deck JST
+    python3 -m kartupintar.cli retensi --deck JST --hari 30
     python3 -m kartupintar.cli ekspor --deck JST --keluar jst.csv
     python3 -m kartupintar.cli impor --deck JST --berkas jst.csv
 """
@@ -58,6 +59,9 @@ def _parser():
     sub.add_parser("jatuh-tempo", help="Tampilkan semua kartu yang jatuh tempo (semua deck).")
     s = sub.add_parser("statistik", help="Tampilkan statistik sebuah deck.")
     s.add_argument("--deck", required=True, help="Nama deck.")
+    t = sub.add_parser("retensi", help="Tampilkan statistik retensi (tingkat ingat, streak).")
+    t.add_argument("--deck", default=None, help="Nama deck (bawaan: semua deck).")
+    t.add_argument("--hari", default="30", help="Jendela hari (bawaan: 30).")
 
     e = sub.add_parser("ekspor", help="Ekspor deck ke berkas CSV.")
     e.add_argument("--deck", required=True, help="Nama deck.")
@@ -172,6 +176,23 @@ def _tampil_statistik(data, nama_deck):
         print(f"    {interval} hari: {jumlah} kartu")
 
 
+def _tampil_retensi(data, nama_deck, hari):
+    if nama_deck is not None and model.cari_deck(data, nama_deck) is None:
+        raise ValueError(f'Deck "{nama_deck}" tidak ditemukan.')
+    stat = retensi.statistik_retensi(data, nama_deck, hari)
+    judul = f'retensi deck "{nama_deck}"' if nama_deck else "retensi semua deck"
+    print(f"Statistik {judul} ({hari} hari terakhir):")
+    print(f"  Total review       : {stat['total']}")
+    print(f"  Benar (nilai >= 3) : {stat['benar']}")
+    print(f"  Tingkat retensi    : {stat['retensi_persen']}%")
+    print(f"  Streak             : {stat['streak']} hari")
+    print("  Per hari:")
+    if not stat["per_hari"]:
+        print("    (belum ada review)")
+    for tanggal, h in stat["per_hari"].items():
+        print(f"    {tanggal}: {h['benar']}/{h['total']} benar")
+
+
 def main(argv=None):
     args = _parser().parse_args(argv)
     try:
@@ -202,6 +223,12 @@ def main(argv=None):
             _tampil_jatuh_tempo(data)
         elif args.perintah == "statistik":
             _tampil_statistik(data, args.deck)
+        elif args.perintah == "retensi":
+            try:
+                hari = int(args.hari)
+            except ValueError:
+                raise ValueError("--hari harus berupa angka, contoh: --hari 30.")
+            _tampil_retensi(data, args.deck, hari)
         elif args.perintah == "ekspor":
             deck = model.cari_deck(data, args.deck)
             if deck is None:
